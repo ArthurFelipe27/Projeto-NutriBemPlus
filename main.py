@@ -11,7 +11,7 @@ from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER # Para centralizar assinatura
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.utils import simpleSplit 
 
 ctk.set_appearance_mode("Dark")
@@ -21,9 +21,17 @@ class SistemaEtiquetas(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Sistema NutriBem + (V8.0 - Versão Gold)")
+        self.title("Sistema NutriBem + (V10.0 - Final)")
         self.geometry("1150x800") 
         self.resizable(False, False)
+
+        # --- ÍCONE DO SISTEMA ---
+        # Se existir o favicon.ico na pasta, ele usa.
+        if os.path.exists("favicon.ico"):
+            try:
+                self.iconbitmap("favicon.ico")
+            except:
+                pass # Se der erro no ícone, o programa abre igual
 
         self.df_completo = None  
         self.df_pacientes = None 
@@ -36,31 +44,33 @@ class SistemaEtiquetas(ctk.CTk):
         self.criar_interface_esquerda()
         self.criar_interface_direita()
         
-        self.carregar_dados()
+        self.carregar_dados(feedback=False)
 
-    # --- FUNÇÃO AUXILIAR PARA LIMPAR NÚMERO DO LEITO ---
     def limpar_leito(self, valor):
         if pd.isna(valor) or valor == "":
             return ""
         try:
-            # Converte para float primeiro (pra pegar 401.0), depois int (401), depois string ("401")
             return str(int(float(valor)))
         except:
-            # Se for texto (ex: "UTI-A"), retorna o texto mesmo
             return str(valor)
 
     def criar_interface_esquerda(self):
         self.frame_esq = ctk.CTkFrame(self, width=400, corner_radius=10)
         self.frame_esq.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
 
-        ctk.CTkLabel(self.frame_esq, text="📋 Pacientes Internados", font=("Arial", 18, "bold")).pack(pady=10)
+        ctk.CTkLabel(self.frame_esq, text="📋 Pacientes Internados", font=("Arial", 18, "bold")).pack(pady=(15, 5))
+
+        self.btn_reload = ctk.CTkButton(self.frame_esq, text="🔄 Atualizar Lista (Ler Excel)", 
+                                        fg_color="#555555", hover_color="#333333", 
+                                        height=30, command=lambda: self.carregar_dados(feedback=True))
+        self.btn_reload.pack(pady=5)
 
         self.entrada_busca = ctk.CTkEntry(self.frame_esq, placeholder_text="Buscar...", width=300)
-        self.entrada_busca.pack(pady=5)
+        self.entrada_busca.pack(pady=10)
         self.entrada_busca.bind("<KeyRelease>", self.filtrar_lista)
 
-        self.scroll_pacientes = ctk.CTkScrollableFrame(self.frame_esq, width=350, height=550)
-        self.scroll_pacientes.pack(pady=10, padx=10, fill="both", expand=True)
+        self.scroll_pacientes = ctk.CTkScrollableFrame(self.frame_esq, width=350, height=500)
+        self.scroll_pacientes.pack(pady=5, padx=10, fill="both", expand=True)
 
         self.lbl_status_lista = ctk.CTkLabel(self.frame_esq, text="Carregando...", text_color="gray")
         self.lbl_status_lista.pack(pady=5)
@@ -108,27 +118,28 @@ class SistemaEtiquetas(ctk.CTk):
                                                  command=self.gerar_relatorio_completo_com_vazios)
         self.btn_relatorio_full.pack(pady=10)
 
-    def carregar_dados(self):
+    def carregar_dados(self, feedback=False):
         try:
+            self.limpar_fila()
             df_raw = pd.read_excel("pacientes.xlsx")
             
-            # Tratamento de dados
             df_raw['ENFERMARIA'] = df_raw['ENFERMARIA'].ffill()
-            
-            # APLICA A LIMPEZA DE NÚMERO (DECIMAL -> INTEIRO)
             df_raw['LEITO'] = df_raw['LEITO'].apply(self.limpar_leito)
             
-            # DataFrame COMPLETO (Audit)
             self.df_completo = df_raw.copy()
-            
-            # DataFrame FILTRADO (Etiquetas)
             self.df_pacientes = df_raw.dropna(subset=['NOME DO PACIENTE']).copy()
             self.df_pacientes['NOME DO PACIENTE'] = self.df_pacientes['NOME DO PACIENTE'].str.strip()
             
             self.povoar_lista_pacientes(self.df_pacientes)
             
+            if feedback:
+                qtd = len(self.df_pacientes)
+                messagebox.showinfo("Atualizado", f"Dados recarregados!\n{qtd} pacientes encontrados.")
+            
+        except PermissionError:
+            messagebox.showerror("Erro", "O Excel está aberto! Feche e tente novamente.")
         except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao ler Excel: {e}")
+            messagebox.showerror("Erro", f"Erro: {e}")
 
     def povoar_lista_pacientes(self, df):
         for widget in self.scroll_pacientes.winfo_children(): widget.destroy()
@@ -255,27 +266,29 @@ class SistemaEtiquetas(ctk.CTk):
         elements.append(Spacer(1, 15))
 
         estilo_celula = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=9, leading=11)
-        data = [['LEITO', 'NOME DO PACIENTE', 'ENFERMARIA', 'DIETA', 'OBSERVAÇÕES']]
+        
+        # --- ORDEM DAS COLUNAS ALTERADA AQUI ---
+        # 1. Enfermaria, 2. Leito, 3. Nome, 4. Dieta, 5. Obs
+        data = [['ENFERMARIA', 'LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']]
         
         for index, row in df_alvo.iterrows():
             nome = str(row['NOME DO PACIENTE']) if pd.notna(row['NOME DO PACIENTE']) else ""
             enf = str(row['ENFERMARIA']) if pd.notna(row['ENFERMARIA']) else ""
-            
-            # Aqui LEITO já vem tratado do carregar_dados, não precisa mexer
             leito = str(row['LEITO']) 
-            
             dieta = str(row['DIETA']) if pd.notna(row['DIETA']) else ""
             obs = str(row['OBSERVAÇÕES']) if pd.notna(row['OBSERVAÇÕES']) else ""
 
             data.append([
-                leito,
+                Paragraph(enf, estilo_celula),   # Agora é o primeiro
+                leito,                           # Agora é o segundo
                 Paragraph(nome, estilo_celula),
-                Paragraph(enf, estilo_celula),
                 Paragraph(dieta, estilo_celula),
                 Paragraph(obs, estilo_celula)
             ])
 
-        col_widths = [50, 240, 130, 150, 200]
+        # --- AJUSTE DE LARGURA PARA A NOVA ORDEM ---
+        # Enf(110), Leito(50), Nome(250), Dieta(160), Obs(200)
+        col_widths = [110, 50, 250, 160, 200]
         t = Table(data, colWidths=col_widths, repeatRows=1)
 
         comandos_estilo = [
@@ -300,23 +313,21 @@ class SistemaEtiquetas(ctk.CTk):
                 if enf_atual != grupo_anterior:
                     if grupo_anterior is not None:
                         fim_grupo = linha_atual_tabela - 1
-                        comandos_estilo.append(('SPAN', (2, inicio_grupo), (2, fim_grupo)))
-                        comandos_estilo.append(('VALIGN', (2, inicio_grupo), (2, fim_grupo), 'MIDDLE'))
+                        # ATENÇÃO: Índice da coluna mudou para 0 (Enfermaria é a primeira)
+                        comandos_estilo.append(('SPAN', (0, inicio_grupo), (0, fim_grupo)))
+                        comandos_estilo.append(('VALIGN', (0, inicio_grupo), (0, fim_grupo), 'MIDDLE'))
                     grupo_anterior = enf_atual
                     inicio_grupo = linha_atual_tabela
-            comandos_estilo.append(('SPAN', (2, inicio_grupo), (2, len(df_reset))))
-            comandos_estilo.append(('VALIGN', (2, inicio_grupo), (2, len(df_reset)), 'MIDDLE'))
+            
+            # Fecha o último grupo
+            comandos_estilo.append(('SPAN', (0, inicio_grupo), (0, len(df_reset))))
+            comandos_estilo.append(('VALIGN', (0, inicio_grupo), (0, len(df_reset)), 'MIDDLE'))
 
         t.setStyle(TableStyle(comandos_estilo))
         elements.append(t)
         
-        # --- ASSINATURA CENTRALIZADA ---
         elements.append(Spacer(1, 40))
-        
-        # Cria um estilo novo que herda do Normal mas com alinhamento CENTER (TA_CENTER = 1)
         estilo_assinatura = ParagraphStyle('Assinatura', parent=styles['Normal'], alignment=TA_CENTER)
-        
-        # Usa esse estilo nos dois parágrafos
         elements.append(Paragraph("_"*60, estilo_assinatura))
         elements.append(Paragraph("<b>NUTRICIONISTA RESPONSÁVEL</b>", estilo_assinatura))
 
