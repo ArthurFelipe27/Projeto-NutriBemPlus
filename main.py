@@ -10,7 +10,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.utils import simpleSplit # Importante para quebrar texto na etiqueta
 
 # Configuração visual
 ctk.set_appearance_mode("Dark")
@@ -20,13 +21,13 @@ class SistemaEtiquetas(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Sistema Hospitalar - Nutrição (V4.0 - Master)")
+        self.title("Sistema Hospitalar - Nutrição (V5.0 - Refinado)")
         self.geometry("1150x800") 
         self.resizable(False, False)
 
         # Dados
-        self.df_completo = None  # Planilha inteira (com vazios)
-        self.df_pacientes = None # Só os internados (para etiquetas)
+        self.df_completo = None  
+        self.df_pacientes = None 
         self.paciente_selecionado = None
         self.fila_impressao = [] 
 
@@ -45,7 +46,7 @@ class SistemaEtiquetas(ctk.CTk):
 
         ctk.CTkLabel(self.frame_esq, text="📋 Pacientes Ativos (Etiquetas)", font=("Arial", 18, "bold")).pack(pady=10)
 
-        self.entrada_busca = ctk.CTkEntry(self.frame_esq, placeholder_text="Filtrar nome ou leito...", width=300)
+        self.entrada_busca = ctk.CTkEntry(self.frame_esq, placeholder_text="Filtrar nome, leito ou dieta...", width=300)
         self.entrada_busca.pack(pady=5)
         self.entrada_busca.bind("<KeyRelease>", self.filtrar_lista)
 
@@ -82,24 +83,21 @@ class SistemaEtiquetas(ctk.CTk):
         self.lbl_contador_fila = ctk.CTkLabel(self.frame_etiquetas, text="0 etiquetas na fila", text_color="yellow")
         self.lbl_contador_fila.pack(pady=0)
 
-        # Botões Imprimir Etiquetas
         self.frame_botoes_print = ctk.CTkFrame(self.frame_etiquetas, fg_color="transparent")
         self.frame_botoes_print.pack(pady=10)
         ctk.CTkButton(self.frame_botoes_print, text="Limpar", fg_color="red", width=80, command=self.limpar_fila).pack(side="left", padx=5)
         ctk.CTkButton(self.frame_botoes_print, text="🖨️ IMPRIMIR ETIQUETAS", fg_color="green", width=200, height=40, command=self.gerar_pdf_etiquetas).pack(side="left", padx=5)
 
         # --- SEÇÃO 2: RELATÓRIOS ---
-        ctk.CTkFrame(self.frame_dir, height=2, fg_color="gray").pack(fill="x", pady=15, padx=20) # Divisória
+        ctk.CTkFrame(self.frame_dir, height=2, fg_color="gray").pack(fill="x", pady=15, padx=20) 
         
-        ctk.CTkLabel(self.frame_dir, text="📑 Relatórios Gerenciais (A4)", font=("Arial", 16, "bold")).pack(pady=5)
+        ctk.CTkLabel(self.frame_dir, text="📑 Relatórios Gerenciais (Tabelas A4)", font=("Arial", 16, "bold")).pack(pady=5)
         
-        # Botão 1: Só os ocupados
         self.btn_relatorio_ativos = ctk.CTkButton(self.frame_dir, text="📄 RELATÓRIO DE PACIENTES (Só Ocupados)", 
                                                  fg_color="#D35400", hover_color="#A04000", height=40, width=400,
                                                  command=self.gerar_relatorio_ativos)
         self.btn_relatorio_ativos.pack(pady=5)
 
-        # Botão 2: Planilha Completa (NOVO!)
         self.btn_relatorio_full = ctk.CTkButton(self.frame_dir, text="📊 IMPRIMIR PLANILHA COMPLETA (Audit)", 
                                                  fg_color="#5B2C6F", hover_color="#4A235A", height=50, width=400,
                                                  command=self.gerar_relatorio_completo_com_vazios)
@@ -107,18 +105,12 @@ class SistemaEtiquetas(ctk.CTk):
 
     def carregar_dados(self):
         try:
-            # 1. Carrega o Excel Bruto
             df_raw = pd.read_excel("pacientes.xlsx")
-            
-            # 2. Tratamento Básico (Preencher Enfermarias vazias e arrumar Leito)
             df_raw['ENFERMARIA'] = df_raw['ENFERMARIA'].ffill()
             df_raw['LEITO'] = df_raw['LEITO'].astype(str)
             
-            # SALVA 1: DataFrame COMPLETO (Inclui linhas vazias de pacientes)
-            # Apenas garantimos que NaN no nome vire string vazia para não dar erro no PDF
             self.df_completo = df_raw.copy()
             
-            # SALVA 2: DataFrame FILTRADO (Apenas quem tem nome)
             self.df_pacientes = df_raw.dropna(subset=['NOME DO PACIENTE']).copy()
             self.df_pacientes['NOME DO PACIENTE'] = self.df_pacientes['NOME DO PACIENTE'].str.strip()
             
@@ -128,8 +120,7 @@ class SistemaEtiquetas(ctk.CTk):
             messagebox.showerror("Erro", f"Erro ao ler Excel: {e}")
 
     def povoar_lista_pacientes(self, df):
-        for widget in self.scroll_pacientes.winfo_children():
-            widget.destroy()
+        for widget in self.scroll_pacientes.winfo_children(): widget.destroy()
 
         if df.empty:
             self.lbl_status_lista.configure(text="Nenhum paciente ativo.")
@@ -148,7 +139,8 @@ class SistemaEtiquetas(ctk.CTk):
         if self.df_pacientes is None: return
         termo = self.entrada_busca.get().lower()
         mask = (self.df_pacientes['NOME DO PACIENTE'].str.lower().str.contains(termo, na=False)) | \
-               (self.df_pacientes['LEITO'].str.contains(termo, na=False))
+               (self.df_pacientes['LEITO'].str.contains(termo, na=False)) | \
+               (self.df_pacientes['DIETA'].astype(str).str.lower().str.contains(termo, na=False))
         self.povoar_lista_pacientes(self.df_pacientes[mask])
 
     def selecionar_paciente(self, row):
@@ -179,7 +171,7 @@ class SistemaEtiquetas(ctk.CTk):
         self.fila_impressao = []
         self.atualizar_fila_visual()
 
-    # --- GERADOR DE ETIQUETAS (Igual V2.2) ---
+    # --- GERADOR DE ETIQUETAS (COM QUEBRA DE LINHA) ---
     def gerar_pdf_etiquetas(self):
         if not self.fila_impressao:
             messagebox.showwarning("Vazio", "Fila vazia!")
@@ -207,34 +199,59 @@ class SistemaEtiquetas(ctk.CTk):
         except: messagebox.showinfo("Sucesso", "Etiquetas geradas!")
 
     def desenhar_etiqueta_individual(self, c, x, y, w, h, p):
-        c.setStrokeColorRGB(0, 0, 0); c.rect(x, y, w, h)
-        c.setFont("Helvetica-Bold", 9); c.drawCentredString(x + w/2, y + h - 8*mm, "SILVA E TEIXEIRA")
-        c.setFont("Helvetica", 7); c.drawCentredString(x + w/2, y + h - 12*mm, "IDENTIFICAÇÃO DE DIETAS")
+        # Borda
+        c.setStrokeColorRGB(0, 0, 0)
+        c.rect(x, y, w, h)
         
+        # Cabeçalho Fixo
+        c.setFont("Helvetica-Bold", 9)
+        c.drawCentredString(x + w/2, y + h - 8*mm, "SILVA E TEIXEIRA")
+        c.setFont("Helvetica", 7)
+        c.drawCentredString(x + w/2, y + h - 12*mm, "IDENTIFICAÇÃO DE DIETAS")
+
+        # Dados Variáveis
         obs = str(p['OBSERVAÇÕES']) if pd.notna(p['OBSERVAÇÕES']) else ''
         dieta = str(p['DIETA']) if pd.notna(p['DIETA']) else ''
+        nome = p['NOME DO PACIENTE']
         
-        c.setFont("Helvetica-Bold", 8)
-        itens = [
-            f"PACIENTE: {p['NOME DO PACIENTE'][:30]}",
-            f"ENF: {p['ENFERMARIA']} - LEITO: {p['LEITO']}",
-            f"DIETA: {dieta}",
-            f"OBS: {obs[:40]}",
-            f"DATA: {datetime.now().strftime('%d/%m/%Y')}"
-        ]
-        for i, item in enumerate(itens):
-            c.drawString(x+3*mm, y+h-18*mm - (i*6*mm), item)
+        # Função Auxiliar para desenhar texto com quebra (WRAP)
+        # Retorna a posição Y onde parou de escrever
+        def desenhar_campo_quebrado(canvas_obj, texto_label, texto_valor, pos_x, pos_y, max_width):
+            canvas_obj.setFont("Helvetica-Bold", 8)
+            
+            # Monta o texto completo
+            texto_completo = f"{texto_label} {texto_valor}"
+            
+            # Quebra o texto em linhas que cabem na largura
+            linhas = simpleSplit(texto_completo, "Helvetica-Bold", 8, max_width)
+            
+            for linha in linhas:
+                canvas_obj.drawString(pos_x, pos_y, linha)
+                pos_y -= 4 * mm # Desce 4mm por linha
+            
+            return pos_y - 2*mm # Retorna nova posição Y com um pequeno espaço extra
 
-    # --- RELATÓRIO 1: APENAS ATIVOS ---
+        # Configurações iniciais de desenho
+        margem_esq = x + 3*mm
+        cursor_y = y + h - 20*mm
+        largura_texto = w - 6*mm # Largura disponível para texto
+
+        # Desenhando linha por linha com quebra automática
+        cursor_y = desenhar_campo_quebrado(c, "PACIENTE:", nome, margem_esq, cursor_y, largura_texto)
+        cursor_y = desenhar_campo_quebrado(c, "ENF:", f"{p['ENFERMARIA']} - LEITO: {p['LEITO']}", margem_esq, cursor_y, largura_texto)
+        cursor_y = desenhar_campo_quebrado(c, "DIETA:", dieta, margem_esq, cursor_y, largura_texto)
+        cursor_y = desenhar_campo_quebrado(c, "OBS:", obs, margem_esq, cursor_y, largura_texto)
+        
+        # Data (Sempre cabe em uma linha, desenha direto no fim)
+        c.drawString(margem_esq, y + 2*mm, f"DATA: {datetime.now().strftime('%d/%m/%Y')}")
+
+    # --- RELATÓRIOS ---
     def gerar_relatorio_ativos(self):
-        self.gerar_tabela_pdf(self.df_pacientes, "relatorio_ativos.pdf", "RELATÓRIO DE PACIENTES INTERNADOS (DIETAS)")
+        self.gerar_tabela_pdf(self.df_pacientes, "relatorio_ativos.pdf", "RELATÓRIO DE PACIENTES INTERNADOS")
 
-    # --- RELATÓRIO 2: COMPLETO (COM VAZIOS) ---
     def gerar_relatorio_completo_com_vazios(self):
-        # Usa o df_completo que tem os NaNs
-        self.gerar_tabela_pdf(self.df_completo, "relatorio_completo_geral.pdf", "MAPA GERAL DE LEITOS E DIETAS")
+        self.gerar_tabela_pdf(self.df_completo, "relatorio_completo.pdf", "MAPA GERAL DE LEITOS E DIETAS")
 
-    # --- MOTOR DE GERAÇÃO DE TABELAS (SERVE PARA OS DOIS) ---
     def gerar_tabela_pdf(self, df_alvo, nome_arquivo, titulo):
         if df_alvo is None or df_alvo.empty:
             messagebox.showwarning("Erro", "Sem dados.")
@@ -242,44 +259,53 @@ class SistemaEtiquetas(ctk.CTk):
 
         doc = SimpleDocTemplate(nome_arquivo, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=20)
         elements = []
+        
+        # Estilos de Texto
         styles = getSampleStyleSheet()
+        estilo_celula = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, leading=10) # Texto menor na tabela
 
         elements.append(Paragraph(f"SILVA E TEIXEIRA - {titulo}", styles['Title']))
         elements.append(Paragraph(f"Emitido em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
         elements.append(Spacer(1, 15))
 
-        data = [['LEITO', 'NOME DO PACIENTE', 'ENFERMARIA', 'DIETA', 'OBS']]
+        # Cabeçalho da Tabela
+        data = [['LEITO', 'NOME DO PACIENTE', 'ENFERMARIA', 'DIETA', 'OBSERVAÇÕES']]
         
-        # Itera sobre o DataFrame
         for index, row in df_alvo.iterrows():
-            # Tratamento de Nulos (Vazio vira string vazia "")
             nome = str(row['NOME DO PACIENTE']) if pd.notna(row['NOME DO PACIENTE']) else ""
             enf = str(row['ENFERMARIA']) if pd.notna(row['ENFERMARIA']) else ""
             leito = str(row['LEITO']) if pd.notna(row['LEITO']) else ""
             dieta = str(row['DIETA']) if pd.notna(row['DIETA']) else ""
             obs = str(row['OBSERVAÇÕES']) if pd.notna(row['OBSERVAÇÕES']) else ""
 
-            # Corta textos muito longos para não quebrar a tabela
-            data.append([leito, nome[:38], enf[:20], dieta[:25], obs[:40]])
+            # TRUQUE: Usar Paragraph dentro da célula para quebrar linha automaticamente
+            p_nome = Paragraph(nome, estilo_celula)
+            p_enf = Paragraph(enf, estilo_celula)
+            p_dieta = Paragraph(dieta, estilo_celula)
+            p_obs = Paragraph(obs, estilo_celula)
+            
+            data.append([leito, p_nome, p_enf, p_dieta, p_obs])
 
-        # Definição das Larguras das Colunas (Ajuste fino para caber na A4 Landscape)
-        # Total disponível ~800pt
+        # Larguras
         col_widths = [50, 240, 130, 150, 200]
+        t = Table(data, colWidths=col_widths, repeatRows=1)
 
-        t = Table(data, colWidths=col_widths, repeatRows=1) # repeatRows=1 repete cabeçalho em cada página
-
-        # Estilo Condicional
-        estilo = TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.2, 0.4, 0.6)), # Azul bonito no header
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        # CORES ALTERNADAS (ZEBRA)
+        estilo_tabela = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue), # Cabeçalho Azul Escuro
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),     # Texto Branco
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'), # Alinhar texto ao topo
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            
+            # MÁGICA DA COR ALTERNADA:
+            # Pinta do registro 1 (ignora cabeçalho 0) até o fim (-1)
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey]) 
         ])
         
-        t.setStyle(estilo)
+        t.setStyle(estilo_tabela)
         elements.append(t)
 
         # Assinatura
