@@ -1,0 +1,328 @@
+:root {
+    --bg-color: #1e1e1e;
+    --sidebar-color: #252526;
+    --card-color: #2d2d30;
+    --text-color: #ffffff;
+    --accent-color: #007acc;
+    --success-color: #28a745;
+    --border-color: #3e3e42;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    overflow: hidden;
+    /* Remove rolagem da janela inteira */
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+}
+
+/* SIDEBAR */
+.sidebar {
+    width: 350px;
+    background-color: var(--sidebar-color);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: var(--card-color);
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.search-box input {
+    background: transparent;
+    border: none;
+    color: white;
+    width: 100%;
+    margin-left: 8px;
+    outline: none;
+}
+
+.patient-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Scrollbar Bonita */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+.patient-item {
+    background: var(--card-color);
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.patient-item:hover {
+    background: #3e3e42;
+    border-left: 3px solid var(--accent-color);
+}
+
+.patient-item h4 {
+    margin: 0;
+    font-size: 14px;
+    color: #eee;
+}
+
+.patient-item p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: #aaa;
+}
+
+/* MAIN CONTENT */
+.main-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+header {
+    margin-bottom: 2rem;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.plus {
+    color: var(--success-color);
+}
+
+.dashboard-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.card {
+    background-color: var(--sidebar-color);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.queue-area {
+    background: var(--bg-color);
+    height: 150px;
+    border-radius: 6px;
+    overflow-y: auto;
+    padding: 10px;
+    margin: 15px 0;
+    border: 1px solid var(--border-color);
+}
+
+#listaFila {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#listaFila li {
+    padding: 5px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 13px;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.actions.vertical {
+    flex-direction: column;
+}
+
+/* BOTÕES */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: 0.2s;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+    width: 100%;
+}
+
+.btn-secondary {
+    background-color: #555;
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    width: 100%;
+    font-size: 1.1rem;
+}
+
+.btn-orange {
+    background-color: #d35400;
+}
+
+.btn-purple {
+    background-color: #8e44ad;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: 0.2s;
+}
+
+.btn-icon:hover {
+    color: white;
+    background-color: #3e3e42;
+    transform: rotate(180deg);
+    /* Efeito legal de giro */
+}
+
+.queue-status {
+    text-align: right;
+    color: #f1c40f;
+    font-size: 0.9rem;
+}
+
+.empty-msg {
+    color: gray;
+    text-align: center;
+    margin-top: 50px;
+    font-style: italic;
+}
+
+
+/* Navegação Lateral */
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    padding: 10px;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+}
+
+.nav-btn:hover {
+    background: #3e3e42;
+    color: white;
+}
+
+.nav-btn.active {
+    background: var(--accent-color);
+    color: white;
+}
+
+/* Estilo do Editor Excel */
+.excel-container {
+    background: var(--sidebar-color);
+    padding: 10px;
+    border-radius: 10px;
+    overflow-x: auto;
+}
+
+#tabelaEditor {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+#tabelaEditor th {
+    background: #1e1e1e;
+    color: #aaa;
+    padding: 10px;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+}
+
+#tabelaEditor td {
+    border-bottom: 1px solid var(--border-color);
+    padding: 5px;
+}
+
+/* Inputs dentro da tabela para parecer Excel */
+#tabelaEditor input {
+    width: 100%;
+    background: transparent;
+    border: 1px solid transparent;
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+}
+
+#tabelaEditor input:focus {
+    border: 1px solid var(--accent-color);
+    background: #333;
+    outline: none;
+}
+
+.btn-remove {
+    background: transparent;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+}
+
+.btn-remove:hover {
+    color: red;
+}

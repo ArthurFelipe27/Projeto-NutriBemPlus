@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriBem +</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="app-container">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Menu</h2>
+                <button class="btn-icon" onclick="recarregarDadosComFeedback()" title="Recarregar Planilha do Disco">
+                    <span class="material-icons">sync</span>
+                </button>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-btn active" onclick="mudarAba('dashboard')">
+                    <span class="material-icons">dashboard</span> Painel
+                </button>
+                <button class="nav-btn" onclick="mudarAba('editor')">
+                    <span class="material-icons">edit_note</span> Editor Excel
+                </button>
+            </nav>
+
+            <hr style="border-color: #3e3e42; margin: 20px 0;">
+
+            <div id="painelBusca">
+                <div class="search-box">
+                    <span class="material-icons">search</span>
+                    <input type="text" id="inputBusca" placeholder="Buscar paciente..." onkeyup="filtrarLista()">
+                </div>
+
+                <div id="listaPacientes" class="patient-list">
+                    <p class="loading">Carregando...</p>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+
+            <section id="tab-dashboard" class="tab-content active">
+                <header>
+                    <h1>Sistema NutriBem <span class="plus">+</span></h1>
+                    <p>Gestão de Dietas e Etiquetas</p>
+                </header>
+
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3><span class="material-icons">style</span> Fila de Impressão</h3>
+                        <div class="queue-area">
+                            <ul id="listaFila">
+                                <li class="empty-msg">Fila vazia.</li>
+                            </ul>
+                        </div>
+                        <div class="queue-status" id="contadorFila">0 etiquetas</div>
+                        <div class="actions">
+                            <button class="btn btn-secondary" onclick="limparFila()">Limpar</button>
+                            <button class="btn btn-primary" onclick="adicionarTodos()">Todos</button>
+                            <button class="btn btn-success" onclick="imprimirFila()">IMPRIMIR</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><span class="material-icons">description</span> Relatórios</h3>
+                        <div class="actions vertical">
+                            <button class="btn btn-orange" onclick="gerarRelatorioSimples()">Relatório Ocupados</button>
+                            <button class="btn btn-purple" onclick="gerarMapaGeral()">Mapa Geral</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-editor" class="tab-content" style="display: none;">
+                <header style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1>Editor de Planilha</h1>
+                    <button class="btn btn-success" onclick="salvarAlteracoesExcel()">
+                        <span class="material-icons">save</span> SALVAR ALTERAÇÕES
+                    </button>
+                </header>
+
+                <div class="excel-container">
+                    <table id="tabelaEditor">
+                        <thead>
+                            <tr>
+                                <th>ENFERMARIA</th>
+                                <th>LEITO</th>
+                                <th>NOME DO PACIENTE</th>
+                                <th>DIETA</th>
+                                <th>OBSERVAÇÕES</th>
+                                <th>AÇÃO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabelaEditor">
+                        </tbody>
+                    </table>
+                    <button class="btn btn-secondary" onclick="adicionarLinhaVazia()" style="margin-top: 10px;">
+                        + Adicionar Linha
+                    </button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
