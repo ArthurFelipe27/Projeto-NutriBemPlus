@@ -29,7 +29,6 @@ class Api:
 
             df_raw = pd.read_excel("pacientes.xlsx")
             
-            # Tratamento visual
             df_raw['ENFERMARIA'] = df_raw['ENFERMARIA'].ffill()
             
             def limpar_leito(val):
@@ -138,7 +137,7 @@ class Api:
         except Exception as e:
             return f"Erro: {e}"
 
-# --- FUNÇÃO DE DESENHO CORRIGIDA (DATA COM ANO E AJUSTE DE ESPAÇO) ---
+# --- FUNÇÃO DE DESENHO CORRIGIDA ---
 
 def desenhar_etiqueta_individual(c, x, y, w, h, p):
     TAMANHO_FONTE = 9
@@ -160,7 +159,7 @@ def desenhar_etiqueta_individual(c, x, y, w, h, p):
     if os.path.exists("logo.png"):
         c.drawImage("logo.png", x + 3*mm, y + h - 13*mm, width=10*mm, height=10*mm, mask='auto', preserveAspectRatio=True)
 
-    # 4. Texto Cabeçalho (Branco)
+    # 4. Texto Cabeçalho 
     c.setFillColor(colors.white)
     c.setFont("Helvetica-Bold", 11)
     c.drawCentredString(x + w/2 + 5*mm, y + h - 6*mm, "SILVA E TEIXEIRA")
@@ -184,7 +183,6 @@ def desenhar_etiqueta_individual(c, x, y, w, h, p):
     # Limitador de caracteres OBS
     if len(obs) > 100: obs = obs[:97] + "..."
 
-    # === POSIÇÕES VERTICAIS (CURSOR DINÂMICO) ===
     cursor_y = y + h - 20*mm 
 
     # --- LINHA 1: PACIENTE ---
@@ -203,13 +201,13 @@ def desenhar_etiqueta_individual(c, x, y, w, h, p):
     c.setFont("Helvetica", TAMANHO_FONTE)
     c.drawString(margem_esq + 9*mm, cursor_y, enf[:15])
 
-    # Leito (Puxei para 38mm, antes era 40mm)
+    # Leito 
     c.setFont("Helvetica-Bold", TAMANHO_FONTE)
     c.drawString(margem_esq + 38*mm, cursor_y, "LEITO:")
     c.setFont("Helvetica", TAMANHO_FONTE)
     c.drawString(margem_esq + 50*mm, cursor_y, leito)
 
-    # Data (Puxei para 63mm, antes era 65mm - Agora com ano /%Y)
+    # Data 
     data_hoje = datetime.now().strftime('%d/%m/%Y')
     c.setFont("Helvetica-Bold", TAMANHO_FONTE)
     c.drawString(margem_esq + 63*mm, cursor_y, "DATA:")
@@ -224,7 +222,6 @@ def desenhar_etiqueta_individual(c, x, y, w, h, p):
     
     cursor_y -= 4*mm 
 
-    # Valor da Dieta
     c.setFont("Helvetica", TAMANHO_FONTE)
     linhas_dieta = simpleSplit(dieta, "Helvetica", TAMANHO_FONTE, w - 6*mm)
     
@@ -240,7 +237,6 @@ def desenhar_etiqueta_individual(c, x, y, w, h, p):
     
     cursor_y -= 4*mm 
 
-    # Valor da Obs
     c.setFont("Helvetica", TAMANHO_FONTE)
     linhas_obs = simpleSplit(obs, "Helvetica", TAMANHO_FONTE, w - 6*mm)
     

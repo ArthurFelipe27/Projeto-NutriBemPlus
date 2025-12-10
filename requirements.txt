@@ -1,0 +1,5 @@
+pywebview
+pandas
+openpyxl
+reportlab
+auto-py-to-exe
