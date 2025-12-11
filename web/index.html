@@ -10,34 +10,31 @@
 </head>
 
 <body>
-
     <div class="app-container">
-
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h2>Menu</h2>
-                <button class="btn-icon" onclick="recarregarDadosComFeedback()" title="Recarregar Planilha do Disco">
+                <button class="btn-icon" onclick="recarregarDadosComFeedback()" title="Recarregar Planilha">
                     <span class="material-icons">sync</span>
                 </button>
             </div>
-
             <nav class="nav-menu">
-                <button class="nav-btn active" onclick="mudarAba('dashboard')">
-                    <span class="material-icons">dashboard</span> Painel
+                <button class="nav-btn active" onclick="mudarAba('enf')">
+                    <span class="material-icons">local_hospital</span> Enfermarias
+                </button>
+                <button class="nav-btn" onclick="mudarAba('uti')">
+                    <span class="material-icons">monitor_heart</span> UTI - HRMSS
                 </button>
                 <button class="nav-btn" onclick="mudarAba('editor')">
-                    <span class="material-icons">edit_note</span> Editor Excel
+                    <span class="material-icons">edit_note</span> Editor
                 </button>
             </nav>
-
             <hr style="border-color: #3e3e42; margin: 20px 0;">
-
             <div id="painelBusca">
                 <div class="search-box">
                     <span class="material-icons">search</span>
-                    <input type="text" id="inputBusca" placeholder="Buscar paciente..." onkeyup="filtrarLista()">
+                    <input type="text" id="inputBusca" placeholder="Buscar..." onkeyup="filtrarLista()">
                 </div>
-
                 <div id="listaPacientes" class="patient-list">
                     <p class="loading">Carregando...</p>
                 </div>
@@ -45,13 +42,11 @@
         </aside>
 
         <main class="main-content">
-
             <section id="tab-dashboard" class="tab-content active">
                 <header>
-                    <h1>Sistema NutriBem <span class="plus">+</span></h1>
+                    <h1>Sistema NutriBem - <span id="tituloSetor" class="plus">Enfermarias</span></h1>
                     <p>Gestão de Dietas e Etiquetas</p>
                 </header>
-
                 <div class="dashboard-grid">
                     <div class="card">
                         <h3><span class="material-icons">style</span> Fila de Impressão</h3>
@@ -67,7 +62,6 @@
                             <button class="btn btn-success" onclick="imprimirFila()">IMPRIMIR</button>
                         </div>
                     </div>
-
                     <div class="card">
                         <h3><span class="material-icons">description</span> Relatórios</h3>
                         <div class="actions vertical">
@@ -81,35 +75,23 @@
             <section id="tab-editor" class="tab-content" style="display: none;">
                 <header style="display: flex; justify-content: space-between; align-items: center;">
                     <h1>Editor de Planilha</h1>
-                    <button class="btn btn-success" onclick="salvarAlteracoesExcel()">
-                        <span class="material-icons">save</span> SALVAR ALTERAÇÕES
+                    <div id="editorControls" style="display:flex; gap:10px;"></div>
+                    <button class="btn btn-success" onclick="salvarExcel()">
+                        <span class="material-icons">save</span> SALVAR TUDO
                     </button>
                 </header>
-
                 <div class="excel-container">
                     <table id="tabelaEditor">
-                        <thead>
-                            <tr>
-                                <th>ENFERMARIA</th>
-                                <th>LEITO</th>
-                                <th>NOME DO PACIENTE</th>
-                                <th>DIETA</th>
-                                <th>OBSERVAÇÕES</th>
-                                <th>AÇÃO</th>
-                            </tr>
-                        </thead>
-                        <tbody id="corpoTabelaEditor">
-                        </tbody>
+                        <thead></thead>
+                        <tbody id="corpoTabelaEditor"></tbody>
                     </table>
                     <button class="btn btn-secondary" onclick="adicionarLinhaVazia()" style="margin-top: 10px;">
                         + Adicionar Linha
                     </button>
                 </div>
             </section>
-
         </main>
     </div>
-
     <script src="script.js"></script>
 </body>
 

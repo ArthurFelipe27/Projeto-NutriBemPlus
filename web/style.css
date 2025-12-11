@@ -1,266 +1,121 @@
+/* --- VARIÁVEIS GLOBAIS (TEMA DARK) --- */
 :root {
     --bg-color: #1e1e1e;
+    /* Fundo Principal */
     --sidebar-color: #252526;
+    /* Fundo Sidebar */
     --card-color: #2d2d30;
+    /* Fundo Cartões/Tabelas */
     --text-color: #ffffff;
-    --accent-color: #007acc;
-    --success-color: #28a745;
+    /* Texto Principal */
+    --text-muted: #aaaaaa;
+    /* Texto Secundário */
     --border-color: #3e3e42;
+    /* Bordas */
+
+    /* Cores de Ação */
+    --accent-color: #007acc;
+    /* Azul VS Code (Primário) */
+    --success-color: #28a745;
+    /* Verde Sucesso */
+    --danger-color: #e74c3c;
+    /* Vermelho Perigo */
+    --warning-color: #f1c40f;
+    /* Amarelo Alerta */
+
+    /* Cores Específicas */
+    --enf-color: #2e86de;
+    /* Cor temática Enfermaria */
+    --uti-color: #e84118;
+    /* Cor temática UTI */
 }
 
+/* --- RESET BÁSICO --- */
 body {
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
+    padding: 0;
     background-color: var(--bg-color);
     color: var(--text-color);
     overflow: hidden;
-    /* Remove rolagem da janela inteira */
+    /* App não deve ter scroll na janela inteira */
+    user-select: none;
+    /* Sensação de App Nativo */
 }
 
+/* --- LAYOUT PRINCIPAL --- */
 .app-container {
     display: flex;
     height: 100vh;
 }
 
-/* SIDEBAR */
+/* --- SIDEBAR (ESQUERDA) --- */
 .sidebar {
-    width: 350px;
+    width: 320px;
     background-color: var(--sidebar-color);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    padding: 1rem;
+    padding: 15px;
+    box-sizing: border-box;
 }
 
 .sidebar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 20px;
 }
 
-.search-box {
-    display: flex;
-    align-items: center;
-    background: var(--card-color);
-    padding: 8px;
-    border-radius: 6px;
-    margin-bottom: 1rem;
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-color);
 }
 
-.search-box input {
+/* Botão de Atualizar (Sync) */
+.btn-icon {
     background: transparent;
-    border: none;
-    color: white;
-    width: 100%;
-    margin-left: 8px;
-    outline: none;
-}
-
-.patient-list {
-    flex: 1;
-    overflow-y: auto;
-}
-
-/* Scrollbar Bonita */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #555;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--bg-color);
-}
-
-.patient-item {
-    background: var(--card-color);
-    padding: 10px;
-    margin-bottom: 5px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: 0.2s;
-    border-left: 3px solid transparent;
-}
-
-.patient-item:hover {
-    background: #3e3e42;
-    border-left: 3px solid var(--accent-color);
-}
-
-.patient-item h4 {
-    margin: 0;
-    font-size: 14px;
-    color: #eee;
-}
-
-.patient-item p {
-    margin: 2px 0 0;
-    font-size: 12px;
-    color: #aaa;
-}
-
-/* MAIN CONTENT */
-.main-content {
-    flex: 1;
-    padding: 2rem;
-    overflow-y: auto;
-}
-
-header {
-    margin-bottom: 2rem;
-}
-
-header h1 {
-    margin: 0;
-    font-size: 24px;
-}
-
-.plus {
-    color: var(--success-color);
-}
-
-.dashboard-grid {
-    display: grid;
-    gap: 20px;
-}
-
-.card {
-    background-color: var(--sidebar-color);
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-}
-
-.queue-area {
-    background: var(--bg-color);
-    height: 150px;
-    border-radius: 6px;
-    overflow-y: auto;
-    padding: 10px;
-    margin: 15px 0;
     border: 1px solid var(--border-color);
-}
-
-#listaFila {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-#listaFila li {
-    padding: 5px;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 13px;
-}
-
-.actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.actions.vertical {
-    flex-direction: column;
-}
-
-/* BOTÕES */
-.btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
+    color: var(--text-muted);
     cursor: pointer;
-    font-weight: bold;
-    color: white;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
-    transition: 0.2s;
-}
-
-.btn:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-}
-
-.btn-primary {
-    background-color: var(--accent-color);
-    width: 100%;
-}
-
-.btn-secondary {
-    background-color: #555;
-}
-
-.btn-success {
-    background-color: var(--success-color);
-    width: 100%;
-    font-size: 1.1rem;
-}
-
-.btn-orange {
-    background-color: #d35400;
-}
-
-.btn-purple {
-    background-color: #8e44ad;
-}
-
-.btn-icon {
-    background: transparent;
-    border: none;
-    color: #ccc;
-    cursor: pointer;
-    padding: 5px;
-    border-radius: 50%;
-    transition: 0.2s;
 }
 
 .btn-icon:hover {
+    background-color: var(--accent-color);
     color: white;
-    background-color: #3e3e42;
+    border-color: var(--accent-color);
     transform: rotate(180deg);
-    /* Efeito legal de giro */
+    /* Efeito de giro */
 }
 
-.queue-status {
-    text-align: right;
-    color: #f1c40f;
-    font-size: 0.9rem;
-}
-
-.empty-msg {
-    color: gray;
-    text-align: center;
-    margin-top: 50px;
-    font-style: italic;
-}
-
-
-/* Navegação Lateral */
+/* Menu de Navegação */
 .nav-menu {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    margin-bottom: 10px;
+    gap: 8px;
 }
 
 .nav-btn {
     background: transparent;
     border: none;
-    color: #aaa;
-    padding: 10px;
+    color: var(--text-muted);
+    padding: 12px;
     text-align: left;
     cursor: pointer;
-    border-radius: 5px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 16px;
+    gap: 12px;
+    font-size: 15px;
+    transition: 0.2s;
 }
 
 .nav-btn:hover {
@@ -271,14 +126,231 @@ header h1 {
 .nav-btn.active {
     background: var(--accent-color);
     color: white;
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-/* Estilo do Editor Excel */
+.nav-btn .material-icons {
+    font-size: 20px;
+}
+
+/* Busca */
+.search-box {
+    display: flex;
+    align-items: center;
+    background: #1e1e1e;
+    /* Mais escuro que a sidebar */
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 15px;
+}
+
+.search-box input {
+    background: transparent;
+    border: none;
+    color: white;
+    width: 100%;
+    margin-left: 10px;
+    outline: none;
+    font-size: 14px;
+}
+
+/* Lista de Pacientes */
+.patient-list {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
+    /* Espaço para scrollbar */
+}
+
+.patient-item {
+    background: var(--card-color);
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    border-left: 4px solid transparent;
+    transition: 0.2s;
+}
+
+.patient-item:hover {
+    background: #383838;
+    border-left-color: var(--accent-color);
+}
+
+.patient-item h4 {
+    margin: 0;
+    font-size: 14px;
+    color: #fff;
+}
+
+.patient-item p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* --- CONTEÚDO PRINCIPAL (DIREITA) --- */
+.main-content {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+    background-color: var(--bg-color);
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 300;
+}
+
+.plus {
+    color: var(--success-color);
+    font-weight: bold;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* 2 Colunas */
+    gap: 25px;
+}
+
+.card {
+    background-color: var(--sidebar-color);
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card h3 {
+    margin-top: 0;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+/* Área da Fila */
+.queue-area {
+    background: #1e1e1e;
+    height: 250px;
+    border-radius: 6px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 10px;
+}
+
+#listaFila {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#listaFila li {
+    padding: 8px;
+    border-bottom: 1px solid #333;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    cursor: alias;
+}
+
+#listaFila li:hover {
+    background-color: #2a2a2a;
+    color: #fff;
+}
+
+.queue-status {
+    text-align: right;
+    font-size: 12px;
+    color: var(--warning-color);
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+/* Botões de Ação */
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.actions.vertical {
+    flex-direction: column;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background 0.2s;
+    width: 100%;
+    /* Botões ocupam largura total do pai */
+}
+
+.btn:hover {
+    filter: brightness(110%);
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background-color: var(--accent-color);
+}
+
+.btn-secondary {
+    background-color: #444;
+    color: #ccc;
+}
+
+.btn-success {
+    background-color: var(--success-color);
+}
+
+.btn-orange {
+    background-color: #e67e22;
+}
+
+.btn-purple {
+    background-color: #8e44ad;
+}
+
+/* --- EDITOR DE EXCEL --- */
 .excel-container {
     background: var(--sidebar-color);
-    padding: 10px;
-    border-radius: 10px;
+    padding: 1px;
+    /* Borda fina */
+    border-radius: 8px;
     overflow-x: auto;
+    border: 1px solid var(--border-color);
 }
 
 #tabelaEditor {
@@ -288,41 +360,89 @@ header h1 {
 }
 
 #tabelaEditor th {
-    background: #1e1e1e;
-    color: #aaa;
-    padding: 10px;
+    background: #333;
+    color: #fff;
+    font-size: 12px;
+    text-transform: uppercase;
+    padding: 12px 8px;
     text-align: left;
     border-bottom: 2px solid var(--border-color);
+    position: sticky;
+    /* Cabeçalho fixo */
+    top: 0;
 }
 
 #tabelaEditor td {
     border-bottom: 1px solid var(--border-color);
-    padding: 5px;
+    padding: 0;
 }
 
-/* Inputs dentro da tabela para parecer Excel */
+/* Garante contraste nos inputs da tabela */
 #tabelaEditor input {
-    width: 100%;
-    background: transparent;
+    color: #ffffff;
+    /* Texto branco */
+    background-color: transparent;
     border: 1px solid transparent;
-    color: white;
+    /* Borda invisível até clicar */
     padding: 8px;
-    border-radius: 4px;
+    width: 100%;
 }
 
 #tabelaEditor input:focus {
-    border: 1px solid var(--accent-color);
-    background: #333;
+    background-color: #3e3e42;
+    /* Fundo cinza ao clicar */
+    border-bottom: 2px solid var(--accent-color);
     outline: none;
+}
+
+#tabelaEditor tr:hover {
+    background-color: #2d2d30;
+    /* Destaca a linha ao passar o mouse */
 }
 
 .btn-remove {
     background: transparent;
     border: none;
-    color: #e74c3c;
+    color: var(--danger-color);
     cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
 }
 
 .btn-remove:hover {
-    color: red;
+    background-color: rgba(231, 76, 60, 0.2);
+}
+
+/* --- UTILITÁRIOS --- */
+.loading {
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 20px;
+    font-style: italic;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Scrollbars Personalizadas (WebKit) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }

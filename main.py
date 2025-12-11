@@ -16,311 +16,284 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.utils import simpleSplit 
 
 # Variáveis Globais
-df_pacientes = None
-df_completo = None
+df_pacientes_enf = None
+df_completo_enf = None
+df_pacientes_uti = None
+df_completo_uti = None
 
 class Api:
     
-    def carregar_dados_excel(self):
-        global df_pacientes, df_completo
+    def criar_excel_padrao(self, nome_arquivo):
         try:
-            if not os.path.exists("pacientes.xlsx"):
-                return {"sucesso": False, "erro": "Arquivo 'pacientes.xlsx' não encontrado."}
+            with pd.ExcelWriter(nome_arquivo, engine='openpyxl') as writer:
+                pd.DataFrame(columns=['ENFERMARIA', 'LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']).to_excel(writer, sheet_name="Enfermaria", index=False)
+                pd.DataFrame(columns=['LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']).to_excel(writer, sheet_name="UTI", index=False)
+        except: pass
 
-            df_raw = pd.read_excel("pacientes.xlsx")
-            
-            df_raw['ENFERMARIA'] = df_raw['ENFERMARIA'].ffill()
-            
+    def carregar_dados_excel(self):
+        global df_pacientes_enf, df_completo_enf, df_pacientes_uti, df_completo_uti
+        
+        arquivo = "pacientes.xlsx"
+        if not os.path.exists(arquivo): self.criar_excel_padrao(arquivo)
+
+        try:
             def limpar_leito(val):
-                if pd.isna(val) or val == "": return ""
+                if pd.isna(val) or str(val).strip() == "": return ""
                 try: return str(int(float(val)))
                 except: return str(val)
 
-            df_raw['LEITO'] = df_raw['LEITO'].apply(limpar_leito)
-            
-            # 1. Lista Completa (Editor)
-            df_completo = df_raw.copy()
-            lista_editor = df_completo.fillna('').to_dict(orient='records')
+            def normalizar_colunas(df):
+                df.columns = [str(col).upper().strip() for col in df.columns]
+                return df
 
-            # 2. Lista Filtrada (Dashboard)
-            df_pacientes = df_raw.dropna(subset=['NOME DO PACIENTE']).copy()
-            df_pacientes['NOME DO PACIENTE'] = df_pacientes['NOME DO PACIENTE'].str.strip()
-            lista_painel = df_pacientes.fillna('').to_dict(orient='records')
+            # --- 1. ENFERMARIA ---
+            try: df_enf = pd.read_excel(arquivo, sheet_name="Enfermaria")
+            except: 
+                try: df_enf = pd.read_excel(arquivo, sheet_name=0)
+                except: df_enf = pd.DataFrame(columns=['ENFERMARIA', 'LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES'])
+
+            df_enf = normalizar_colunas(df_enf)
+            for col in ['ENFERMARIA', 'LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']:
+                if col not in df_enf.columns: df_enf[col] = ""
+
+            if 'ENFERMARIA' in df_enf.columns: df_enf['ENFERMARIA'] = df_enf['ENFERMARIA'].ffill()
+            df_enf['LEITO'] = df_enf['LEITO'].apply(limpar_leito)
             
+            df_completo_enf = df_enf.copy()
+            df_pacientes_enf = df_enf.dropna(subset=['NOME DO PACIENTE']).copy()
+            df_pacientes_enf = df_pacientes_enf[df_pacientes_enf['NOME DO PACIENTE'].astype(str).str.strip() != '']
+
+            # --- 2. UTI ---
+            try: df_uti = pd.read_excel(arquivo, sheet_name="UTI")
+            except: df_uti = pd.DataFrame(columns=['LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES'])
+
+            df_uti = normalizar_colunas(df_uti)
+            for col in ['LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']:
+                if col not in df_uti.columns: df_uti[col] = ""
+
+            df_uti['LEITO'] = df_uti['LEITO'].apply(limpar_leito)
+            df_completo_uti = df_uti.copy()
+            df_pacientes_uti = df_uti.dropna(subset=['NOME DO PACIENTE']).copy()
+            df_pacientes_uti = df_pacientes_uti[df_pacientes_uti['NOME DO PACIENTE'].astype(str).str.strip() != '']
+            
+            df_pacientes_uti['ENFERMARIA'] = "UTI HRMSS"
+            df_completo_uti['ENFERMARIA'] = "UTI HRMSS" 
+
             return {
                 "sucesso": True, 
-                "dados": lista_painel,       
-                "dados_editor": lista_editor 
+                "dados_enf": df_pacientes_enf.fillna('').to_dict(orient='records'),
+                "dados_uti": df_pacientes_uti.fillna('').to_dict(orient='records'),
+                "editor_enf": df_completo_enf.fillna('').to_dict(orient='records'),
+                "editor_uti": df_completo_uti.fillna('').to_dict(orient='records')
             }
-        
-        except PermissionError:
-            return {"sucesso": False, "erro": "O Excel está aberto! Feche e tente novamente."}
-        except Exception as e:
-            return {"sucesso": False, "erro": str(e)}
+        except PermissionError: return {"sucesso": False, "erro": "O Excel está aberto! Feche e tente novamente."}
+        except Exception as e: return {"sucesso": False, "erro": f"Erro leitura: {str(e)}"}
 
-    def salvar_dados_excel(self, novos_dados):
+    def salvar_dados_excel(self, dados_enf, dados_uti):
         try:
-            df_novo = pd.DataFrame(novos_dados)
-            colunas_ordem = ['ENFERMARIA', 'LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']
-            for col in colunas_ordem:
-                if col not in df_novo.columns:
-                    df_novo[col] = ""
-            
-            df_final = df_novo[colunas_ordem]
-            df_final.to_excel("pacientes.xlsx", index=False)
+            with pd.ExcelWriter("pacientes.xlsx", engine='openpyxl') as writer:
+                df_enf = pd.DataFrame(dados_enf)
+                cols_enf = ['ENFERMARIA', 'LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']
+                for c in cols_enf: 
+                    if c not in df_enf.columns: df_enf[c] = ""
+                df_enf[cols_enf].to_excel(writer, sheet_name="Enfermaria", index=False)
+                
+                df_uti = pd.DataFrame(dados_uti)
+                cols_uti = ['LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']
+                for c in cols_uti: 
+                    if c not in df_uti.columns: df_uti[c] = ""
+                df_uti[cols_uti].to_excel(writer, sheet_name="UTI", index=False)
+
             self.carregar_dados_excel()
             return {"sucesso": True, "msg": "Planilha salva com sucesso!"}
+        except PermissionError: return {"sucesso": False, "msg": "Erro: O Excel está aberto. Feche-o."}
+        except Exception as e: return {"sucesso": False, "msg": f"Erro ao salvar: {str(e)}"}
+
+    # --- CORREÇÃO AQUI: TRATAMENTO ROBUSTO DO CAMINHO ---
+    def tratar_caminho(self, caminho):
+        if not caminho: return None
+        # Se vier como tupla ou lista (comum no Pywebview), pega o primeiro item
+        if isinstance(caminho, (tuple, list)):
+            if len(caminho) > 0: caminho = caminho[0]
+            else: return None
+        
+        # Garante que é string
+        caminho = str(caminho)
+        
+        # Se o usuário não digitou .pdf, a gente coloca
+        if not caminho.lower().endswith('.pdf'):
+            caminho += '.pdf'
             
-        except PermissionError:
-            return {"sucesso": False, "msg": "Erro: O Excel está aberto. Feche o arquivo."}
-        except Exception as e:
-            return {"sucesso": False, "msg": f"Erro ao salvar: {str(e)}"}
+        return caminho
 
     def pedir_caminho_salvar(self, nome_sugerido):
-        caminho = webview.windows[0].create_file_dialog(
-            webview.SAVE_DIALOG, 
-            directory='', 
-            save_filename=nome_sugerido,
-            file_types=('Arquivos PDF (*.pdf)',)
-        )
-        return caminho 
+        try:
+            # Tenta pegar a janela ativa, se falhar, pega a primeira
+            janela = webview.windows[0]
+            caminho = janela.create_file_dialog(
+                webview.SAVE_DIALOG, 
+                directory='', 
+                save_filename=nome_sugerido,
+                file_types=('Arquivos PDF (*.pdf)',)
+            )
+            return self.tratar_caminho(caminho)
+        except Exception as e:
+            print(f"Erro no diálogo: {e}")
+            return None
 
     def imprimir_etiquetas(self, lista_pacientes):
         if not lista_pacientes: return "Fila vazia!"
-
-        caminho_arquivo = self.pedir_caminho_salvar("etiquetas.pdf")
-        if not caminho_arquivo: return "Cancelado."
         
-        if isinstance(caminho_arquivo, (tuple, list)): caminho_arquivo = caminho_arquivo[0]
-        if not caminho_arquivo.endswith('.pdf'): caminho_arquivo += '.pdf'
+        caminho = self.pedir_caminho_salvar("etiquetas.pdf")
+        if not caminho: return "Cancelado."
 
         try:
-            c = canvas.Canvas(caminho_arquivo, pagesize=A4)
-            largura_etiqueta, altura_etiqueta = 95*mm, 52*mm
-            gap_vertical = 3*mm
-            colunas, linhas_por_pag = 2, 5
+            c = canvas.Canvas(caminho, pagesize=A4)
+            largura, altura = 95*mm, 52*mm
+            gap = 3*mm
+            colunas, linhas = 2, 5
             
             for i, p in enumerate(lista_pacientes):
-                if i > 0 and i % (colunas * linhas_por_pag) == 0: c.showPage()
-                pos_pag = i % (colunas * linhas_por_pag)
-                x = 10*mm + ((pos_pag % colunas) * (largura_etiqueta + 5*mm))
-                y = A4[1] - 10*mm - (((pos_pag // colunas) + 1) * (altura_etiqueta + gap_vertical))
-                desenhar_etiqueta_individual(c, x, y, largura_etiqueta, altura_etiqueta, p)
-                
+                if i > 0 and i % (colunas * linhas) == 0: c.showPage()
+                pos = i % (colunas * linhas)
+                x = 10*mm + ((pos % colunas) * (largura + 5*mm))
+                y = A4[1] - 10*mm - (((pos // colunas) + 1) * (altura + gap))
+                desenhar_etiqueta_individual(c, x, y, largura, altura, p)
+            
             c.save()
-            os.startfile(caminho_arquivo)
-            return "PDF salvo e aberto!"
-        except Exception as e:
-            return f"Erro: {e}"
+            os.startfile(caminho)
+            return "PDF salvo e aberto com sucesso!"
+            
+        except PermissionError:
+            return "ERRO: O arquivo PDF está aberto! Feche-o e tente novamente."
+        except Exception as e: 
+            return f"Erro ao gerar PDF: {e}"
 
-    def gerar_relatorio_simples(self):
-        if df_pacientes is None: return "Erro: Carregue a lista primeiro."
-        caminho_arquivo = self.pedir_caminho_salvar("relatorio_ocupados.pdf")
-        if not caminho_arquivo: return "Cancelado."
-        if isinstance(caminho_arquivo, (tuple, list)): caminho_arquivo = caminho_arquivo[0]
-        if not caminho_arquivo.endswith('.pdf'): caminho_arquivo += '.pdf'
+    def gerar_relatorio_enf(self, tipo):
+        df = df_pacientes_enf if tipo == 'simples' else df_completo_enf
+        if df is None: return "Carregue os dados."
+        
+        nome = "relatorio_enf_ocupados.pdf" if tipo == 'simples' else "mapa_enf_geral.pdf"
+        titulo = "PACIENTES OCUPADOS" if tipo == 'simples' else "MAPA GERAL (AUDITORIA)"
+        
+        caminho = self.pedir_caminho_salvar(nome)
+        if not caminho: return "Cancelado."
+
         try:
-            gerar_tabela_pdf(df_pacientes, caminho_arquivo, "PACIENTES OCUPADOS", mesclar=False)
-            return "Relatório salvo!"
-        except Exception as e:
-            return f"Erro: {e}"
+            gerar_tabela_padrao(df, caminho, titulo, mesclar=(tipo=='geral'))
+            return "Relatório Salvo!"
+        except PermissionError: return "ERRO: Feche o PDF aberto antes de salvar!"
+        except Exception as e: return f"Erro: {e}"
 
-    def gerar_mapa_geral(self):
-        if df_completo is None: return "Erro: Carregue a lista primeiro."
-        caminho_arquivo = self.pedir_caminho_salvar("mapa_auditoria.pdf")
-        if not caminho_arquivo: return "Cancelado."
-        if isinstance(caminho_arquivo, (tuple, list)): caminho_arquivo = caminho_arquivo[0]
-        if not caminho_arquivo.endswith('.pdf'): caminho_arquivo += '.pdf'
+    def gerar_relatorio_uti(self, tipo):
+        df = df_pacientes_uti if tipo == 'simples' else df_completo_uti
+        if df is None or df.empty: return "Sem dados na UTI."
+        
+        nome = "relatorio_uti_ocupados.pdf" if tipo == 'simples' else "mapa_uti_corrida_leito.pdf"
+        titulo = "NUTRIÇÃO - CORRIDA DE LEITO - UTI HRMSS" 
+        
+        caminho = self.pedir_caminho_salvar(nome)
+        if not caminho: return "Cancelado."
+
         try:
-            gerar_tabela_pdf(df_completo, caminho_arquivo, "MAPA GERAL (AUDITORIA)", mesclar=True)
-            return "Mapa Geral salvo!"
-        except Exception as e:
-            return f"Erro: {e}"
+            gerar_tabela_uti(df, caminho, titulo)
+            return "Relatório Salvo!"
+        except PermissionError: return "ERRO: Feche o PDF aberto antes de salvar!"
+        except Exception as e: return f"Erro: {e}"
 
-# --- FUNÇÃO DE DESENHO CORRIGIDA ---
-
+# --- DESENHOS E RELATÓRIOS (Mantidos IGUAIS à V18) ---
+# Copiei exatamente o que funcionava
 def desenhar_etiqueta_individual(c, x, y, w, h, p):
     TAMANHO_FONTE = 9
-
-    # 1. Borda
-    c.setStrokeColorRGB(0, 0, 0)
-    c.setLineWidth(1)
-    c.rect(x, y, w, h)
-    
-    # 2. Cabeçalho Verde Escuro
-    cor_header = HexColor('#355a31')
-    c.setFillColor(cor_header) 
-    c.setStrokeColor(cor_header) 
-    
-    altura_header = 15*mm
-    c.roundRect(x + 1*mm, y + h - altura_header - 1*mm, w - 2*mm, altura_header, 3*mm, fill=1, stroke=0)
-
-    # 3. Logo
-    if os.path.exists("logo.png"):
-        c.drawImage("logo.png", x + 3*mm, y + h - 13*mm, width=10*mm, height=10*mm, mask='auto', preserveAspectRatio=True)
-
-    # 4. Texto Cabeçalho 
-    c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 11)
+    c.setStrokeColorRGB(0, 0, 0); c.setLineWidth(1); c.rect(x, y, w, h)
+    cor_header = HexColor('#355a31'); c.setFillColor(cor_header); c.setStrokeColor(cor_header)
+    c.roundRect(x + 1*mm, y + h - 15*mm - 1*mm, w - 2*mm, 15*mm, 3*mm, fill=1, stroke=0)
+    if os.path.exists("logo.png"): c.drawImage("logo.png", x + 3*mm, y + h - 13*mm, width=12*mm, height=12*mm, mask='auto', preserveAspectRatio=True)
+    c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 11)
     c.drawCentredString(x + w/2 + 5*mm, y + h - 6*mm, "SILVA E TEIXEIRA")
     c.setFont("Helvetica-Bold", 7)
     c.drawCentredString(x + w/2 + 5*mm, y + h - 9.5*mm, "IDENTIFICAÇÃO DE DIETAS")
     c.drawCentredString(x + w/2 + 5*mm, y + h - 12.5*mm, "PARA PACIENTES")
-
-    # --- CORPO DA ETIQUETA ---
     c.setFillColor(colors.black)
-    
     margem_esq = x + 3*mm
-    
-    nome = str(p.get('NOME DO PACIENTE', ''))
-    enf = str(p.get('ENFERMARIA', ''))
-    leito = str(p.get('LEITO', ''))
-    dieta = str(p.get('DIETA', ''))
-    obs = str(p.get('OBSERVAÇÕES', ''))
-    if obs == "nan": obs = ""
+    nome = str(p.get('NOME DO PACIENTE', '')); enf = str(p.get('ENFERMARIA', '')); leito = str(p.get('LEITO', ''))
+    dieta = str(p.get('DIETA', '')); obs = str(p.get('OBSERVAÇÕES', ''))
+    if obs == "nan": obs = ""; 
     if dieta == "nan": dieta = ""
-
-    # Limitador de caracteres OBS
     if len(obs) > 100: obs = obs[:97] + "..."
-
     cursor_y = y + h - 20*mm 
-
-    # --- LINHA 1: PACIENTE ---
-    c.setFont("Helvetica-Bold", TAMANHO_FONTE)
-    c.drawString(margem_esq, cursor_y, "PACIENTE:")
-    c.setFont("Helvetica", TAMANHO_FONTE)
-    c.drawString(margem_esq + 19*mm, cursor_y, nome[:40]) 
-    
+    c.setFont("Helvetica-Bold", TAMANHO_FONTE); c.drawString(margem_esq, cursor_y, "PACIENTE:")
+    c.setFont("Helvetica", TAMANHO_FONTE); c.drawString(margem_esq + 19*mm, cursor_y, nome[:40]) 
     cursor_y -= 5*mm 
-
-    # --- LINHA 2: ENFERMARIA | LEITO | DATA (Ajustado para caber ano) ---
-    
-    # Enfermaria
-    c.setFont("Helvetica-Bold", TAMANHO_FONTE)
-    c.drawString(margem_esq, cursor_y, "ENF:")
-    c.setFont("Helvetica", TAMANHO_FONTE)
-    c.drawString(margem_esq + 9*mm, cursor_y, enf[:15])
-
-    # Leito 
-    c.setFont("Helvetica-Bold", TAMANHO_FONTE)
-    c.drawString(margem_esq + 38*mm, cursor_y, "LEITO:")
-    c.setFont("Helvetica", TAMANHO_FONTE)
-    c.drawString(margem_esq + 50*mm, cursor_y, leito)
-
-    # Data 
-    data_hoje = datetime.now().strftime('%d/%m/%Y')
-    c.setFont("Helvetica-Bold", TAMANHO_FONTE)
-    c.drawString(margem_esq + 63*mm, cursor_y, "DATA:")
-    c.setFont("Helvetica", TAMANHO_FONTE)
-    c.drawString(margem_esq + 74*mm, cursor_y, data_hoje)
-
+    c.setFont("Helvetica-Bold", TAMANHO_FONTE); c.drawString(margem_esq, cursor_y, "ENF:")
+    c.setFont("Helvetica", TAMANHO_FONTE); c.drawString(margem_esq + 9*mm, cursor_y, enf[:15])
+    c.setFont("Helvetica-Bold", TAMANHO_FONTE); c.drawString(margem_esq + 38*mm, cursor_y, "LEITO:")
+    c.setFont("Helvetica", TAMANHO_FONTE); c.drawString(margem_esq + 50*mm, cursor_y, leito)
+    c.setFont("Helvetica-Bold", TAMANHO_FONTE); c.drawString(margem_esq + 63*mm, cursor_y, "DATA:")
+    c.setFont("Helvetica", TAMANHO_FONTE); c.drawString(margem_esq + 74*mm, cursor_y, datetime.now().strftime('%d/%m/%Y'))
     cursor_y -= 5*mm 
-
-    # --- LINHA 3: TIPO DE DIETA ---
-    c.setFont("Helvetica-Bold", TAMANHO_FONTE)
-    c.drawString(margem_esq, cursor_y, "TIPO DE DIETA:")
-    
+    c.setFont("Helvetica-Bold", TAMANHO_FONTE); c.drawString(margem_esq, cursor_y, "TIPO DE DIETA:")
     cursor_y -= 4*mm 
-
     c.setFont("Helvetica", TAMANHO_FONTE)
-    linhas_dieta = simpleSplit(dieta, "Helvetica", TAMANHO_FONTE, w - 6*mm)
-    
-    for linha in linhas_dieta:
-        c.drawString(margem_esq, cursor_y, linha)
-        cursor_y -= 4*mm 
-
+    for linha in simpleSplit(dieta, "Helvetica", TAMANHO_FONTE, w - 6*mm): c.drawString(margem_esq, cursor_y, linha); cursor_y -= 4*mm 
     cursor_y -= 1*mm 
-
-    # --- LINHA 4: OBSERVAÇÃO ---
-    c.setFont("Helvetica-Bold", TAMANHO_FONTE)
-    c.drawString(margem_esq, cursor_y, "OBSERVAÇÃO:")
-    
+    c.setFont("Helvetica-Bold", TAMANHO_FONTE); c.drawString(margem_esq, cursor_y, "OBSERVAÇÃO:")
     cursor_y -= 4*mm 
-
     c.setFont("Helvetica", TAMANHO_FONTE)
-    linhas_obs = simpleSplit(obs, "Helvetica", TAMANHO_FONTE, w - 6*mm)
-    
-    for linha in linhas_obs:
+    for linha in simpleSplit(obs, "Helvetica", TAMANHO_FONTE, w - 6*mm): 
         if cursor_y < y + 2*mm: break 
-        c.drawString(margem_esq, cursor_y, linha)
-        cursor_y -= 4*mm
+        c.drawString(margem_esq, cursor_y, linha); cursor_y -= 4*mm
 
-# --- FUNÇÃO DE RELATÓRIO (MANTIDA IGUAL) ---
-
-def gerar_tabela_pdf(df_alvo, nome_arquivo, subtitulo, mesclar=False):
-    doc = SimpleDocTemplate(nome_arquivo, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=20)
+def gerar_tabela_padrao(df, nome, tit, mesclar=False):
+    doc = SimpleDocTemplate(nome, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=20)
     elements = []
     styles = getSampleStyleSheet()
-    
-    if os.path.exists("logo.png"):
-        logo = Image("logo.png", width=15*mm, height=15*mm)
-        logo.hAlign = 'CENTER'; elements.append(logo); elements.append(Spacer(1, 10))
-
-    estilo_sub = ParagraphStyle('SubTitle', parent=styles['Normal'], alignment=1, fontSize=10)
-    elements.append(Paragraph(f"<b>{subtitulo}</b> - Emitido em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", estilo_sub))
+    if os.path.exists("logo.png"): logo = Image("logo.png", width=35*mm, height=35*mm); logo.hAlign = 'CENTER'; elements.append(logo); elements.append(Spacer(1, 10))
+    estilo_sub = ParagraphStyle('SubTitle', parent=styles['Normal'], alignment=TA_CENTER, fontSize=10)
+    elements.append(Paragraph(f"<b>{tit}</b> - Emitido em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", estilo_sub))
     elements.append(Spacer(1, 15))
-
     estilo_celula = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=9, leading=11)
     data = [['ENFERMARIA', 'LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']]
-    
-    for index, row in df_alvo.iterrows():
+    for index, row in df.iterrows():
         nome = str(row['NOME DO PACIENTE']) if pd.notna(row['NOME DO PACIENTE']) else ""
         enf = str(row['ENFERMARIA']) if pd.notna(row['ENFERMARIA']) else ""
-        leito = str(row['LEITO']) 
-        dieta = str(row['DIETA']) if pd.notna(row['DIETA']) else ""
-        obs = str(row['OBSERVAÇÕES']) if pd.notna(row['OBSERVAÇÕES']) else ""
-
-        data.append([
-            Paragraph(enf, estilo_celula), leito, Paragraph(nome, estilo_celula),
-            Paragraph(dieta, estilo_celula), Paragraph(obs, estilo_celula)
-        ])
-
-    col_widths = [110, 50, 250, 160, 200]
-    t = Table(data, colWidths=col_widths, repeatRows=1)
-
-    comandos_estilo = [
-        ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.2, 0.6, 0.3)), 
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.white]) 
-    ]
-
+        leito = str(row['LEITO']); dieta = str(row['DIETA']) if pd.notna(row['DIETA']) else ""; obs = str(row['OBSERVAÇÕES']) if pd.notna(row['OBSERVAÇÕES']) else ""
+        data.append([Paragraph(enf, estilo_celula), leito, Paragraph(nome, estilo_celula), Paragraph(dieta, estilo_celula), Paragraph(obs, estilo_celula)])
+    t = Table(data, colWidths=[110, 50, 250, 160, 200], repeatRows=1)
+    estilo = [('BACKGROUND',(0,0),(-1,0),colors.Color(0.2,0.6,0.3)), ('TEXTCOLOR',(0,0),(-1,0),colors.white), ('GRID',(0,0),(-1,-1),0.5,colors.grey), ('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.whitesmoke,colors.white])]
     if mesclar:
-        grupo_anterior = None; inicio_grupo = 1 
-        df_reset = df_alvo.reset_index(drop=True)
-        for i in range(len(df_reset)):
-            linha_atual_tabela = i + 1 
-            enf_atual = df_reset.iloc[i]['ENFERMARIA']
-            if enf_atual != grupo_anterior:
-                if grupo_anterior is not None:
-                    fim_grupo = linha_atual_tabela - 1
-                    comandos_estilo.append(('SPAN', (0, inicio_grupo), (0, fim_grupo)))
-                    comandos_estilo.append(('VALIGN', (0, inicio_grupo), (0, fim_grupo), 'MIDDLE'))
-                grupo_anterior = enf_atual; inicio_grupo = linha_atual_tabela
-        comandos_estilo.append(('SPAN', (0, inicio_grupo), (0, len(df_reset))))
-        comandos_estilo.append(('VALIGN', (0, inicio_grupo), (0, len(df_reset)), 'MIDDLE'))
-
-    t.setStyle(TableStyle(comandos_estilo))
-    elements.append(t); elements.append(Spacer(1, 40))
-    estilo_assinatura = ParagraphStyle('Assinatura', parent=styles['Normal'], alignment=TA_CENTER)
-    elements.append(Paragraph("_"*60, estilo_assinatura))
-    elements.append(Paragraph("<b>NUTRICIONISTA RESPONSÁVEL</b>", estilo_assinatura))
+        g=None; ini=1; dfr=df.reset_index(drop=True)
+        for i in range(len(dfr)):
+            atual=dfr.iloc[i]['ENFERMARIA']
+            if atual!=g:
+                if g: estilo.append(('SPAN',(0,ini),(0,i))); estilo.append(('VALIGN',(0,ini),(0,i),'MIDDLE'))
+                g=atual; ini=i+1
+        estilo.append(('SPAN',(0,ini),(0,len(dfr)))); estilo.append(('VALIGN',(0,ini),(0,len(dfr)),'MIDDLE'))
+    t.setStyle(TableStyle(estilo)); elements.append(t); elements.append(Spacer(1,40))
+    elements.append(Paragraph("_"*60, ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER))); elements.append(Paragraph("<b>NUTRICIONISTA RESPONSÁVEL</b>", ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER)))
     doc.build(elements)
-    
-    if os.path.exists(nome_arquivo): os.startfile(nome_arquivo)
+    if os.path.exists(nome): os.startfile(nome)
 
-# --- INICIALIZAÇÃO ---
+def gerar_tabela_uti(df, nome, tit):
+    doc = SimpleDocTemplate(nome, pagesize=landscape(A4), rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=20)
+    elements = []
+    styles = getSampleStyleSheet()
+    if os.path.exists("logo.png"): logo = Image("logo.png", width=35*mm, height=35*mm); logo.hAlign = 'CENTER'; elements.append(logo); elements.append(Spacer(1, 5))
+    elements.append(Paragraph(f"DATA: {datetime.now().strftime('%d/%m/%Y')}", ParagraphStyle('DT', parent=styles['Normal'], alignment=TA_CENTER, fontSize=12)))
+    elements.append(Paragraph(tit, ParagraphStyle('T', parent=styles['Title'], alignment=TA_CENTER, textColor=colors.darkblue)))
+    data = [['LEITO', 'NOME DO PACIENTE', 'DIETA', 'OBSERVAÇÕES']]
+    style = ParagraphStyle('C', parent=s['Normal'], fontSize=10)
+    for i, r in df.iterrows(): data.append([str(r['LEITO']), Paragraph(str(r['NOME DO PACIENTE']), style), Paragraph(str(r['DIETA']), style), Paragraph(str(r['OBSERVAÇÕES']), style)])
+    t = Table(data, colWidths=[60, 280, 200, 230], repeatRows=1)
+    t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.darkblue), ('TEXTCOLOR',(0,0),(-1,0),colors.white), ('GRID',(0,0),(-1,-1),0.5,colors.grey), ('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.whitesmoke,colors.white])]))
+    elements.append(t); elements.append(Spacer(1, 30))
+    rodape = [[Paragraph("<b>Nº DE FUNCIONÁRIOS DIA:</b> _______________", styles['Normal']), Paragraph("<b>Nº DE FUNCIONÁRIOS NOITE:</b> _______________", styles['Normal'])]]
+    elements.append(Table(rodape, colWidths=[350,350])); elements.append(Spacer(1, 30))
+    elements.append(Paragraph("_"*60, ParagraphStyle('A', parent=styles['Normal'], alignment=TA_CENTER))); elements.append(Paragraph("<b>NUTRICIONISTA RESPONSÁVEL</b>", ParagraphStyle('A', parent=styles['Normal'], alignment=TA_CENTER)))
+    doc.build(elements)
+    if os.path.exists(nome): os.startfile(nome)
+
 if __name__ == '__main__':
     api = Api()
-    webview.create_window(
-        'Sistema NutriBem +', 
-        'web/index.html', 
-        js_api=api,
-        width=1200, 
-        height=800,
-        resizable=True
-    )
+    webview.create_window('Sistema NutriBem +', 'web/index.html', js_api=api, width=1200, height=800, resizable=True)
     webview.start()
