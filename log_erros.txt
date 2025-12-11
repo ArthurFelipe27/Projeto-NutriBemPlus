@@ -1,0 +1,32 @@
+2025-12-11 14:40:00.614122: Erro relatorio enf: Traceback (most recent call last):
+  File "e:\Programa de Automatizacao Excel\main.py", line 215, in _gerar_relatorio_generico
+    gerar_tabela_padrao(df, caminho, titulo, mesclar=(tipo=='geral'))
+  File "e:\Programa de Automatizacao Excel\main.py", line 333, in gerar_tabela_padrao
+    elements.append(Paragraph("_"*60, ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER))); elements.append(Paragraph("<b>NUTRICIONISTA RESPONSÁVEL</b>", ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER)))
+                                                                 ^
+NameError: name 's' is not defined
+
+2025-12-11 14:40:03.830888: Erro relatorio enf: Traceback (most recent call last):
+  File "e:\Programa de Automatizacao Excel\main.py", line 215, in _gerar_relatorio_generico
+    gerar_tabela_padrao(df, caminho, titulo, mesclar=(tipo=='geral'))
+  File "e:\Programa de Automatizacao Excel\main.py", line 333, in gerar_tabela_padrao
+    elements.append(Paragraph("_"*60, ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER))); elements.append(Paragraph("<b>NUTRICIONISTA RESPONSÁVEL</b>", ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER)))
+                                                                 ^
+NameError: name 's' is not defined
+
+2025-12-11 14:40:47.527363: Erro relatorio enf: Traceback (most recent call last):
+  File "e:\Programa de Automatizacao Excel\main.py", line 215, in _gerar_relatorio_generico
+    gerar_tabela_padrao(df, caminho, titulo, mesclar=(tipo=='geral'))
+  File "e:\Programa de Automatizacao Excel\main.py", line 333, in gerar_tabela_padrao
+    elements.append(Paragraph("_"*60, ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER))); elements.append(Paragraph("<b>NUTRICIONISTA RESPONSÁVEL</b>", ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER)))
+                                                                 ^
+NameError: name 's' is not defined
+
+2025-12-11 16:14:14.490188: Erro relatório: Traceback (most recent call last):
+  File "e:\Programa de Automatizacao Excel\main.py", line 199, in _gerar_relatorio
+    gerar_tabela_padrao(df, caminho, titulo, mesclar=(tipo=='geral'))
+  File "e:\Programa de Automatizacao Excel\main.py", line 309, in gerar_tabela_padrao
+    elements.append(Paragraph("_"*60, ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER))); elements.append(Paragraph("<b>NUTRICIONISTA RESPONSÁVEL</b>", ParagraphStyle('A', parent=s['Normal'], alignment=TA_CENTER)))
+                                                                 ^
+NameError: name 's' is not defined
+
