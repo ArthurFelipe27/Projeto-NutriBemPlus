@@ -1,10 +1,9 @@
-let dadosEnf = [], dadosUti = [];
-let editorEnf = [], editorUti = [];
+let dadosEnf = [], dadosUti = [], dadosUpa = [];
+let editorEnf = [], editorUti = [], editorUpa = [];
 let filaImpressao = [];
 let setorAtual = 'ENF';
 let abaEditorAtual = 'ENF';
 
-// Inicialização
 window.addEventListener('pywebviewready', carregarDados);
 setTimeout(() => { if (dadosEnf.length === 0) carregarDados(); }, 1500);
 
@@ -18,12 +17,14 @@ function escaparTexto(texto) {
     return String(texto).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-// --- NAVEGAÇÃO ---
 function mudarAba(aba) {
     document.querySelectorAll('.tab-content').forEach(d => d.style.display = 'none');
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
-    let btnIndex = (aba === 'enf') ? 0 : (aba === 'uti') ? 1 : 2;
+    let btnIndex = 0;
+    if (aba === 'uti') btnIndex = 1;
+    if (aba === 'upa') btnIndex = 2;
+    if (aba === 'editor') btnIndex = 3;
     document.querySelectorAll('.nav-btn')[btnIndex].classList.add('active');
 
     if (aba === 'editor') {
@@ -32,69 +33,59 @@ function mudarAba(aba) {
         abaEditorAtual = 'ENF';
         renderizarEditor();
     } else {
-        setorAtual = (aba === 'enf') ? 'ENF' : 'UTI';
+        if (aba === 'enf') setorAtual = 'ENF';
+        else if (aba === 'uti') setorAtual = 'UTI';
+        else setorAtual = 'UPA';
+
         document.getElementById('tab-dashboard').style.display = 'block';
-        let titulo = (setorAtual === 'ENF') ? 'Enfermarias' : 'UTI - HRMSS';
-        document.getElementById('tituloSetor').innerText = titulo;
+
+        let titulos = { 'ENF': 'Enfermarias', 'UTI': 'UTI - HRMSS', 'UPA': 'UPA - Urgência' };
+        document.getElementById('tituloSetor').innerText = titulos[setorAtual];
 
         document.getElementById('painelBusca').style.display = 'block';
-        renderizarLista(setorAtual === 'ENF' ? dadosEnf : dadosUti);
-
+        renderizarLista(getDadosAtuais());
         filaImpressao = []; atualizarFila();
     }
 }
 
-// --- CARREGAMENTO ---
+function getDadosAtuais() {
+    if (setorAtual === 'ENF') return dadosEnf;
+    if (setorAtual === 'UTI') return dadosUti;
+    return dadosUpa;
+}
+
 async function carregarDados() {
     if (window.pywebview && window.pywebview.api) {
         try {
             let res = await pywebview.api.carregar_dados_excel();
-
             if (res.sucesso) {
-                dadosEnf = res.dados_enf;
-                dadosUti = res.dados_uti;
-                editorEnf = res.editor_enf;
-                editorUti = res.editor_uti;
+                dadosEnf = res.dados_enf; dadosUti = res.dados_uti; dadosUpa = res.dados_upa;
+                editorEnf = res.editor_enf; editorUti = res.editor_uti; editorUpa = res.editor_upa;
 
-                if (document.getElementById('tab-editor').style.display === 'block') {
-                    renderizarEditor();
-                } else {
-                    renderizarLista(setorAtual === 'ENF' ? dadosEnf : dadosUti);
-                }
-            } else {
-                alert("Erro ao ler Excel: " + res.erro);
-            }
-        } catch (e) {
-            console.error(e);
-        }
+                if (document.getElementById('tab-editor').style.display === 'block') renderizarEditor();
+                else renderizarLista(getDadosAtuais());
+            } else alert(res.erro);
+        } catch (e) { console.error(e); }
     }
 }
 
-// --- LISTA LATERAL ---
 function renderizarLista(lista) {
     const div = document.getElementById("listaPacientes");
     div.innerHTML = "";
-    if (!lista || lista.length === 0) {
-        div.innerHTML = "<p style='text-align:center; padding:20px; color:#aaa'>Nenhum paciente encontrado.</p>";
-        return;
-    }
+    if (!lista || lista.length === 0) { div.innerHTML = "<p style='text-align:center;padding:20px'>Vazio.</p>"; return; }
     lista.forEach(p => {
         let item = document.createElement("div");
         item.className = "patient-item";
         item.onclick = () => adicionarFila(p);
-
-        let local = setorAtual === 'ENF' ? p['ENFERMARIA'] : 'UTI';
-        let dieta = p['DIETA'] ? p['DIETA'] : '---';
-
-        item.innerHTML = `<h4>${p['LEITO']} - ${p['NOME DO PACIENTE']}</h4><p>${local} | ${dieta}</p>`;
+        let sub = (setorAtual === 'ENF') ? p['ENFERMARIA'] : (setorAtual === 'UTI' ? 'UTI' : 'UPA');
+        item.innerHTML = `<h4>${p['LEITO']} - ${p['NOME DO PACIENTE']}</h4><p>${sub} | ${p['DIETA'] || ''}</p>`;
         div.appendChild(item);
     });
 }
 
 function filtrarLista() {
     let termo = document.getElementById("inputBusca").value.toLowerCase();
-    let listaBase = (setorAtual === 'ENF') ? dadosEnf : dadosUti;
-
+    let listaBase = getDadosAtuais();
     let filtrados = listaBase.filter(p => {
         let nome = String(p['NOME DO PACIENTE']).toLowerCase();
         let leito = String(p['LEITO']).toLowerCase();
@@ -103,23 +94,24 @@ function filtrarLista() {
     renderizarLista(filtrados);
 }
 
-// --- EDITOR ---
 function renderizarEditor() {
     const container = document.getElementById("editorControls");
-    const clsEnf = abaEditorAtual === 'ENF' ? 'btn-primary' : 'btn-secondary';
-    const clsUti = abaEditorAtual === 'UTI' ? 'btn-primary' : 'btn-secondary';
+    const cls = (aba) => abaEditorAtual === aba ? 'btn-primary' : 'btn-secondary';
 
     container.innerHTML = `
-        <button class="btn ${clsEnf}" onclick="trocarEditor('ENF')">Enfermaria (${editorEnf.length})</button>
-        <button class="btn ${clsUti}" onclick="trocarEditor('UTI')">UTI (${editorUti.length})</button>
+        <button class="btn ${cls('ENF')}" onclick="trocarEditor('ENF')">Enf (${editorEnf.length})</button>
+        <button class="btn ${cls('UTI')}" onclick="trocarEditor('UTI')">UTI (${editorUti.length})</button>
+        <button class="btn ${cls('UPA')}" onclick="trocarEditor('UPA')">UPA (${editorUpa.length})</button>
     `;
 
-    const dados = (abaEditorAtual === 'ENF') ? editorEnf : editorUti;
+    let dados;
+    if (abaEditorAtual === 'ENF') dados = editorEnf;
+    else if (abaEditorAtual === 'UTI') dados = editorUti;
+    else dados = editorUpa;
 
     const tbody = document.getElementById("corpoTabelaEditor");
     const thead = document.querySelector("#tabelaEditor thead");
-    tbody.innerHTML = "";
-    thead.innerHTML = "";
+    tbody.innerHTML = ""; thead.innerHTML = "";
 
     let trHead = document.createElement("tr");
     if (abaEditorAtual === 'ENF') {
@@ -128,7 +120,6 @@ function renderizarEditor() {
         trHead.innerHTML = `<th>LEITO</th><th>NOME DO PACIENTE</th><th>DIETA</th><th>OBSERVAÇÕES</th><th style="width:50px">X</th>`;
     }
     thead.appendChild(trHead);
-
     dados.forEach(row => criarLinhaEditor(tbody, row));
 }
 
@@ -137,9 +128,8 @@ function criarLinhaEditor(tbody, row = {}) {
     let html = "";
     const val = (k) => escaparTexto(row[k]);
 
-    if (abaEditorAtual === 'ENF') {
-        html += `<td><input class="edit-enf" value="${val('ENFERMARIA')}"></td>`;
-    }
+    if (abaEditorAtual === 'ENF') html += `<td><input class="edit-enf" value="${val('ENFERMARIA')}"></td>`;
+
     html += `
         <td><input class="edit-leito" value="${val('LEITO')}"></td>
         <td><input class="edit-nome" value="${val('NOME DO PACIENTE')}"></td>
@@ -164,55 +154,37 @@ function trocarEditor(tipo) {
 function salvarEstadoTemporario() {
     const linhas = document.querySelectorAll("#corpoTabelaEditor tr");
     let novosDados = [];
-
     linhas.forEach(tr => {
         let obj = {};
-        if (abaEditorAtual === 'ENF') {
-            obj['ENFERMARIA'] = tr.querySelector(".edit-enf") ? tr.querySelector(".edit-enf").value : "";
-        }
+        if (abaEditorAtual === 'ENF') obj['ENFERMARIA'] = tr.querySelector(".edit-enf").value;
         obj['LEITO'] = tr.querySelector(".edit-leito").value;
         obj['NOME DO PACIENTE'] = tr.querySelector(".edit-nome").value;
         obj['DIETA'] = tr.querySelector(".edit-dieta").value;
         obj['OBSERVAÇÕES'] = tr.querySelector(".edit-obs").value;
-
-        if (obj['LEITO'] || obj['NOME DO PACIENTE']) {
-            novosDados.push(obj);
-        }
+        if (obj['LEITO'] || obj['NOME DO PACIENTE']) novosDados.push(obj);
     });
-
     if (abaEditorAtual === 'ENF') editorEnf = novosDados;
-    else editorUti = novosDados;
+    else if (abaEditorAtual === 'UTI') editorUti = novosDados;
+    else editorUpa = novosDados;
 }
 
 function adicionarLinhaVazia() {
-    const tbody = document.getElementById("corpoTabelaEditor");
-    criarLinhaEditor(tbody);
-    setTimeout(() => {
-        tbody.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        let inputs = tbody.lastElementChild.querySelectorAll('input');
-        if (inputs.length > 0) inputs[0].focus();
-    }, 100);
+    criarLinhaEditor(document.getElementById("corpoTabelaEditor"));
+    document.getElementById("corpoTabelaEditor").lastElementChild.scrollIntoView({ behavior: 'smooth' });
 }
 
 async function salvarExcel() {
     salvarEstadoTemporario();
-    if (confirm(`Salvar alterações?\n\nEnfermaria: ${editorEnf.length} registros\nUTI: ${editorUti.length} registros`)) {
-        let res = await pywebview.api.salvar_dados_excel(editorEnf, editorUti);
-        if (res.sucesso) {
-            alert("✅ Salvo com sucesso!");
-            carregarDados();
-        } else {
-            alert("❌ " + res.msg);
-        }
+    if (confirm("Salvar alterações em TODAS as planilhas?")) {
+        let res = await pywebview.api.salvar_dados_excel(editorEnf, editorUti, editorUpa);
+        if (res.sucesso) { alert("✅ Salvo com sucesso!"); carregarDados(); }
+        else alert("❌ " + res.msg);
     }
 }
 
 function adicionarFila(p) { filaImpressao.push(p); atualizarFila(); }
 function limparFila() { filaImpressao = []; atualizarFila(); }
-function adicionarTodos() {
-    let lista = (setorAtual === 'ENF') ? dadosEnf : dadosUti;
-    filaImpressao = [...lista]; atualizarFila();
-}
+function adicionarTodos() { filaImpressao = [...getDadosAtuais()]; atualizarFila(); }
 function atualizarFila() {
     document.getElementById("contadorFila").innerText = filaImpressao.length + " etiquetas";
     const ul = document.getElementById("listaFila");
@@ -224,30 +196,23 @@ function atualizarFila() {
 }
 
 async function imprimirFila() {
-    if (filaImpressao.length === 0) { alert("Adicione pacientes à fila primeiro."); return; }
+    if (filaImpressao.length === 0) { alert("Fila vazia."); return; }
     let msg = await pywebview.api.imprimir_etiquetas(filaImpressao);
     if (msg !== "Cancelado.") alert(msg);
 }
 
-// --- CORREÇÃO AQUI (ADICIONADO OS ALERTAS) ---
 async function gerarRelatorioSimples() {
     let msg;
-    if (setorAtual === 'ENF') {
-        msg = await pywebview.api.gerar_relatorio_enf('simples');
-    } else {
-        msg = await pywebview.api.gerar_relatorio_uti('simples');
-    }
-
+    if (setorAtual === 'ENF') msg = await pywebview.api.gerar_relatorio_enf('simples');
+    else if (setorAtual === 'UTI') msg = await pywebview.api.gerar_relatorio_uti('simples');
+    else msg = await pywebview.api.gerar_relatorio_upa('simples');
     if (msg !== "Cancelado.") alert(msg);
 }
 
 async function gerarMapaGeral() {
     let msg;
-    if (setorAtual === 'ENF') {
-        msg = await pywebview.api.gerar_relatorio_enf('geral');
-    } else {
-        msg = await pywebview.api.gerar_relatorio_uti('geral');
-    }
-
+    if (setorAtual === 'ENF') msg = await pywebview.api.gerar_relatorio_enf('geral');
+    else if (setorAtual === 'UTI') msg = await pywebview.api.gerar_relatorio_uti('geral');
+    else msg = await pywebview.api.gerar_relatorio_upa('geral');
     if (msg !== "Cancelado.") alert(msg);
 }
